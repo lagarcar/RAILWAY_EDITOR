@@ -1,0 +1,37 @@
+package eseo.idm.railway
+
+class Station {
+	String idStation
+	String name
+	double posX
+	double posY
+	String color
+	refers Line[] lines opposite stations
+	refers Area area opposite stations
+	
+}
+
+class Line{
+	int idLine
+	String color
+	refers Station[] stations opposite lines
+}
+
+class MetroMap{
+	int idCurrentLine
+	int idCurrentArea
+	contains Line[] lines
+	contains Station[] stations
+	contains Area[] areas
+}
+
+class Area{
+	int idArea
+	String name
+	String color
+	double posX
+	double posY
+	double width
+	double height
+	refers Station[] stations opposite area
+}

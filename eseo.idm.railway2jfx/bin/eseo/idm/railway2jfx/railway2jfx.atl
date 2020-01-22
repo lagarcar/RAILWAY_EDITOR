@@ -1,0 +1,179 @@
+-- @path Railway=/eseo.idm.railway/model/railwayMap.xcore
+
+
+module railway2jfx;
+create OUT: JFX from IN: Railway;
+
+helper def: STATION_RADIUS : Real = 20.0;
+helper def: STATION_STROKE_WIDTH : Real = 10.0;
+
+unique lazy rule Station{
+		from
+		s: Railway!Station
+	to
+		t: JFX!Figure (
+			nodes <- Sequence{c,
+						txt},
+			children <- Sequence{},
+			constraints <- Sequence{constraints}
+		),
+		c: JFX!Circle (
+			radius <- 15,
+			fill <- '0xffffffff',
+			centerX <- s.posX,
+			centerY <- s.posY,
+			stroke <- s.color,
+			strokeWidth <- thisModule.STATION_STROKE_WIDTH,
+			movable <- true,
+			editable <-true,
+			id <- s.idStation.toString()
+			
+		),
+		temp: JFX!Rectangle,
+		txt: JFX!Text (
+			text <- s.name,
+			movable <- true,
+			visible <- true
+		),
+		constraints: Constraints!ConstraintGroup (
+			solver <- 'cassowary',
+			constraints <- Sequence{
+					c.centerX.suggest(s.posX),
+					c.centerY.suggest(s.posY),
+--					temp.x.suggest(s.posX - thisModule.Area(s.area).rect.x)
+--					,temp.y.suggest(s.posY - thisModule.Area(s.area).rect.y),
+					temp.x = c.centerX - (thisModule.Area(s.area).rect.x),
+					temp.y = c.centerY - (thisModule.Area(s.area).rect.y),
+					temp.x.stay('MEDIUM'),
+					temp.y.stay('MEDIUM'),
+					c.radius = thisModule.STATION_RADIUS,
+					c.centerY>=c.radius + thisModule.STATION_STROKE_WIDTH / 2,
+					c.centerX >= c.radius + thisModule.STATION_STROKE_WIDTH / 2,
+					txt.x = c.centerX-txt.width.toConstant()/2,
+					txt.y = c.centerY+40
+					
+--					,c.centerX >= thisModule.Area(s.area).rect.x + thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2,
+--					c.centerX <= thisModule.Area(s.area).rect.x + thisModule.Area(s.area).rect.width - thisModule.STATION_RADIUS - thisModule.STATION_STROKE_WIDTH / 2,
+--					c.centerY >= thisModule.Area(s.area).rect.y + thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2,
+--					c.centerY <= thisModule.Area(s.area).rect.y + thisModule.Area(s.area).rect.height - thisModule.STATION_RADIUS - thisModule.STATION_STROKE_WIDTH / 2
+					,temp.x >= 0.0	--thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2
+					,temp.y >= 0.0	-- thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2
+					,temp.x <= thisModule.Area(s.area).rect.width
+					,temp.y <= thisModule.Area(s.area).rect.height
+			}
+			
+		)
+}
+
+
+
+unique lazy rule Line{
+		from
+		s: Railway!Line
+	to
+		t: JFX!Figure (
+			nodes <- Sequence{pl,
+						txt},
+			children <- Sequence {},
+			constraints <- Sequence{}
+		),
+		pl: JFX!Polyline (
+			stroke <- s.color,
+			strokeWidth <- 10.0,
+			strokeLineJoin <- #ROUND,
+			fill <-'0xffffff00',
+			points <- s.stations->collect(e | Sequence {e.posX, e.posY})->flatten()
+		),
+		txt: JFX!Text (
+			editable <- true,
+			movable <- true
+		)
+}
+
+unique lazy rule MetroMap{
+	from
+	s: Railway!MetroMap
+	to
+	t: JFX!Figure(
+		children <- (
+						s.areas->collect(e |
+							thisModule.Area(e).t
+						)
+					)->concat(
+						s.lines->collect(e |
+							thisModule.Line(e).t
+						)
+					)->concat(
+						s.stations->collect(e |
+							thisModule.Station(e).t
+						)
+					),
+		constraints <- Sequence{constraints}
+	),
+	rect : JFX!Rectangle,
+	constraints: Constraints!ConstraintGroup (
+			solver <- 'cassowary',
+			constraints <- Sequence{
+					s.stations->collect(e |
+						thisModule.Station(e)
+					).c.centerY.".+"(thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2).".<="(rect.height.toConstant()),
+					s.stations->collect(e |
+						thisModule.Station(e)
+					).c.centerX.".+"(thisModule.STATION_RADIUS + thisModule.STATION_STROKE_WIDTH / 2).".<="(rect.width.toConstant())
+			}
+			
+		)
+}
+
+unique lazy rule Area{
+		from
+		s: Railway!Area
+	to
+		t: JFX!Figure (
+			nodes <- Sequence{rect,
+						txt},
+			children <- Sequence{},
+			constraints <- Sequence{constraints}
+		),
+		rect: JFX!Rectangle (
+			x <-s.posX,
+			y<- s.posY,
+			fill <-s.color,
+			width <-s.width,
+			height <- s.height,
+			movable <- true,
+			opacity <- 0.5
+			--centerX <- s.posX+s.width/2,
+			--centerY <- s.posY+s.height/2
+			
+		),
+		txt: JFX!Text (
+			editable <- true,
+			movable <- true
+		),
+		constraints: Constraints!ConstraintGroup (
+			solver <- 'cassowary',
+			constraints <- Sequence{
+					rect.width >= 50,
+					rect.height >= 50
+					
+--					,rect.width = 0  -- WEAK
+--					,rect.height = 0	-- WEAK
+					
+					,rect.x.suggest(s.posX)
+					,rect.y.suggest(s.posY)
+					,rect.x.stay('STRONG')
+					,rect.y.stay('STRONG')
+--					,rect.width.suggest(s.width)
+--					,rect.height.suggest(s.height)
+					
+					--rect.y.stay('MEDIUM')
+--					rect.width.stay('WEAK'),
+--					rect.height.stay('WEAK')
+					
+					}
+			
+		)
+
+		
+}
